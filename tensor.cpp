@@ -136,7 +136,13 @@ class tensor{
         }
 
         tensor operator[](int start = 0, std::optional<int> finish = std::nullopt, int step = 1) {
-            finish = finish.value_or(dims[0]);
+            if(not finish.has_value()){
+                finish = start+1;
+            }
+            else {
+                finish = finish.value_or(dims[0]);
+            }
+
 
             std::vector<unsigned int> out_dims {dims};
             out_dims[0] = (finish.value() - start + step - 1) / step;
@@ -206,7 +212,7 @@ int main(){
     std::cout<<std::endl;
 
 
-    tensor<float> t2 {t[0, 2]};
+    tensor<float> t2 {t[1]};
     for(float i: t2.flat_tensor){std::cout<<i<<" ";}
     std::cout<<std::endl;
     for(float i: t2.dims){std::cout<<i<<" ";}
