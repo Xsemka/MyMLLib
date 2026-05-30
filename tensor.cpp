@@ -1,18 +1,21 @@
+#include <algorithm>
+#include <cstddef> 
 #include <iostream>
 #include <iterator>
+#include <optional>
+#include <utility>
 #include <vector>
 #include <array>
 #include <type_traits>
-using namespace std;
 
 
 template<typename T_type>
 class tensor{
     public:
         unsigned int count = 1;
-        vector<unsigned int> strides;
-        vector<unsigned int> dim;
-        vector<T_type> flat_tensor;
+        std::vector<unsigned int> strides;
+        std::vector<unsigned int> dims;
+        std::vector<T_type> flat_tensor;
         template<typename InpType>
         tensor(const InpType& inp_tensor){
             extract_dim(inp_tensor);
@@ -21,13 +24,19 @@ class tensor{
             extract_flat_data(inp_tensor);     
             calc_strides();
         }
+
         template<typename Other_type>
         tensor(const tensor<Other_type>& other_tensor) {
-            this -> dim = other_tensor.dim;
+            this -> dims = other_tensor.dim;
             this -> count = other_tensor.count;
             this -> strides = other_tensor.strides;
             this -> flat_tensor.reserve(other_tensor.count);
             this -> flat_tensor.assign(other_tensor.flat_tensor.begin(), other_tensor.flat_tensor.end());
+        }
+
+        tensor(std::vector<unsigned int> given_dims, std::vector<T_type> given_flat_tensor): dims(std::move(given_dims)), flat_tensor(std::move(given_flat_tensor)) {
+            calc_count_of_elements();
+            calc_strides();
         }
         
         tensor& operator+=(const auto& scalar) {
@@ -126,10 +135,27 @@ class tensor{
             return *this /= tensor;
         }
 
+        tensor operator[](int start = 0, std::optional<int> finish = std::nullopt, int step = 1) {
+            finish = finish.value_or(dims[0]);
+
+            std::vector<unsigned int> out_dims {dims};
+            out_dims[0] = (finish.value() - start + step - 1) / step;
+
+            std::vector<T_type> out_flat_tensor;
+
+            for(int i = start; i < finish.value(); i += step){
+                for(int j = i*strides[0]; j < i*strides[0] + strides[0]; j++) {
+                    out_flat_tensor.push_back(flat_tensor[j]);
+                }
+            }
+            return tensor<T_type> (std::move(out_dims), std::move(out_flat_tensor));
+            
+        }
+
 
     private:
         void calc_count_of_elements(){
-            for(unsigned int d: dim){
+            for(unsigned int d: dims){
                 count *= d;
             }
             return;
@@ -137,18 +163,18 @@ class tensor{
 
         template<typename Current_type>
         void extract_dim(const Current_type& current_dim){
-            if constexpr (is_arithmetic_v<Current_type>) {
+            if constexpr (std::is_arithmetic_v<Current_type>) {
                 return;
             }
             else{
-                dim.push_back(size(current_dim));
+                dims.push_back(size(current_dim));
                 if(size(current_dim)>0){extract_dim(current_dim[0]);}
             }
         }
         
         template<typename Current_type>
         void extract_flat_data(const Current_type& current_tensor){
-            if constexpr (is_arithmetic_v<Current_type>) {
+            if constexpr (std::is_arithmetic_v<Current_type>) {
                 flat_tensor.push_back(current_tensor);
                 return;
             }
@@ -160,20 +186,32 @@ class tensor{
         }
 
         void calc_strides(){
-            strides.resize(size(dim));
+            strides.resize(size(dims));
             int current_stride = 1;
-            for(int i = size(dim)-1; i >= 0; i--){
+            for(int i = size(dims)-1; i >= 0; i--){
                 strides[i] = current_stride;
-                current_stride *= dim[i];
+                current_stride *= dims[i];
             }
         }     
 };  
 
 int main(){
-    array<array<int, 3>, 3> a {{{1,2,3}, {4,5,6}, {7, 8, 9}}};
+    std::array<std::array<int, 3>, 2> a {{{1,2,3}, {4,5,6},}};
     tensor<float> t{a};
-    tensor t2 = t/2;
-    for(float i: t2.flat_tensor){cout<<i<<" ";}
-    
+    for(float i: t.flat_tensor){std::cout<<i<<" ";}
+    std::cout<<std::endl;
+    for(float i: t.dims){std::cout<<i<<" ";}
+    std::cout<<std::endl;
+    for(float i: t.strides){std::cout<<i<<" ";}
+    std::cout<<std::endl;
+
+
+    tensor<float> t2 {t[0, 2]};
+    for(float i: t2.flat_tensor){std::cout<<i<<" ";}
+    std::cout<<std::endl;
+    for(float i: t2.dims){std::cout<<i<<" ";}
+    std::cout<<std::endl;
+    for(float i: t2.strides){std::cout<<i<<" ";}
+    std::cout<<std::endl;
 }
 
