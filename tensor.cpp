@@ -162,6 +162,8 @@ class tensor{
         template<typename ... Args>
         tensor reshape(Args...args) {
             dims = std::vector<unsigned int> {static_cast<unsigned int>(args) ...};
+            strides.clear();
+            calc_strides();
             return *this;
         }
 
