@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cstddef> 
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -136,23 +135,25 @@ class tensor{
         }
 
         tensor operator[](int start = 0, std::optional<int> finish = std::nullopt, int step = 1) {
-            if(not finish.has_value()){
-                finish = start+1;
-            }
-            else {
-                finish = finish.value_or(dims[0]);
-            }
-
+            int final_finish = finish.value_or(start + 1);
 
             std::vector<unsigned int> out_dims {dims};
-            out_dims[0] = (finish.value() - start + step - 1) / step;
+            out_dims[0] = (final_finish - start + step - 1) / step;
 
             std::vector<T_type> out_flat_tensor;
-
-            for(int i = start; i < finish.value(); i += step){
-                for(int j = i*strides[0]; j < i*strides[0] + strides[0]; j++) {
-                    out_flat_tensor.push_back(flat_tensor[j]);
+            out_flat_tensor.resize(out_dims[0] * strides[0]);
+            
+            if(step != 1){
+                auto iter = out_flat_tensor.begin();
+                for(int i = start; i < final_finish; i += step) {
+                    auto src_start = flat_tensor.begin() + (i * strides[0]);
+                    std::copy(src_start, src_start + strides[0], iter);
+                    iter += strides[0];
                 }
+            }
+            else {
+                auto src_start = flat_tensor.begin() + start * strides[0];
+                std::copy(src_start, src_start+ out_dims[0] * strides[0], out_flat_tensor.begin());
             }
             return tensor<T_type> (std::move(out_dims), std::move(out_flat_tensor));
             
@@ -212,7 +213,7 @@ int main(){
     std::cout<<std::endl;
 
 
-    tensor<float> t2 {t[1]};
+    tensor<float> t2 {t[0]};
     for(float i: t2.flat_tensor){std::cout<<i<<" ";}
     std::cout<<std::endl;
     for(float i: t2.dims){std::cout<<i<<" ";}
