@@ -160,12 +160,20 @@ class tensor{
         }
 
         template<typename ... Args>
-        tensor reshape(Args...args) {
+        tensor& reshape(Args...args) {
             dims = std::vector<unsigned int> {static_cast<unsigned int>(args) ...};
             strides.clear();
             calc_strides();
             return *this;
         }
+
+        tensor& T() {
+            std::reverse(dims.begin(), dims.end());
+            strides.clear();
+            calc_strides();
+            return *this;
+        }
+
 
     private:
         void calc_count_of_elements(){
@@ -220,7 +228,7 @@ int main(){
     std::cout<<std::endl;
 
 
-    t.reshape(1, 6);
+    t.T();
     for(float i: t.flat_tensor){std::cout<<i<<" ";}
     std::cout<<std::endl;
     for(float i: t.dims){std::cout<<i<<" ";}
